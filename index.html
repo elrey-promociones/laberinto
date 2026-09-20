@@ -23,7 +23,6 @@
       -webkit-touch-callout: none;
     }
 
-    /* 1 y 2. Ocupar el 100% de la pantalla del celular sin márgenes ni scroll */
     body, html {
       width: 100vw;
       height: 100vh;
@@ -38,7 +37,6 @@
       flex-direction: column;
     }
 
-    /* 3. Contenedor principal de borde a borde (Full Screen) con fondo estirado sin franjas */
     #app-wrapper {
       position: relative;
       width: 100vw;
@@ -58,7 +56,6 @@
       box-shadow: none;
     }
 
-    /* Controles flotantes en la parte superior */
     #floating-controls {
       position: absolute;
       top: max(12px, env(safe-area-inset-top));
@@ -83,7 +80,7 @@
       justify-content: center;
       cursor: pointer;
       font-size: 15px;
-      transition: all 0.2s ease;
+      transition: transform 0.15s ease;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 10px rgba(234, 179, 8, 0.3);
     }
 
@@ -91,7 +88,6 @@
       transform: scale(0.92);
     }
 
-    /* Área flexible de Phaser a pantalla completa */
     #game-container {
       flex: 1;
       width: 100%;
@@ -111,7 +107,6 @@
       background: transparent !important;
     }
 
-    /* Pop-up de Victoria */
     #victory-modal {
       position: absolute;
       inset: 0;
@@ -280,14 +275,14 @@
         <h2 class="victory-title">¡Felicitaciones!</h2>
         <p class="victory-subtitle">¡Llegaste al regalo! Reclama tu premio y llévate tu extra ahora mismo.</p>
         
-        <a id="btn-claim-prize" class="btn-claim" href="#" target="_blank" rel="noopener noreferrer">
+        <button id="btn-claim-prize" class="btn-claim" type="button">
           <svg viewBox="0 0 24 24">
             <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766 0-3.187-2.59-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.297.144.35.491 1.2.534 1.288.043.088.072.19.014.305-.058.115-.087.187-.173.289l-.26.309c-.087.087-.179.18-.077.355.101.175.45 0.742.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.102-.115.434-.506.549-.68.116-.174.232-.145.39-.087s1.011.477 1.184.564c.173.087.289.13.332.202.043.073.043.419-.101.824zm-3.423-10.416c-5.523 0-10 4.477-10 10 0 1.884.524 3.646 1.436 5.163l-1.524 5.571 5.733-1.504c1.464.838 3.161 1.317 4.969 1.317 5.523 0 10-4.477 10-10s-4.477-10-10-10zm0 18.393c-1.637 0-3.155-.472-4.436-1.288l-.318-.202-3.3 0.866.881-3.219-.221-.352c-.896-1.425-1.373-3.093-1.373-4.814 0-4.631 3.769-8.4 8.4-8.4s8.4 3.769 8.4 8.4-3.769 8.4-8.4 8.4z"/>
           </svg>
           Cobrar Premio
-        </a>
+        </button>
 
-        <button id="btn-modal-retry" class="btn-retry">
+        <button id="btn-modal-retry" class="btn-retry" type="button">
           Jugar otra partida
         </button>
       </div>
@@ -297,16 +292,32 @@
   </div>
 
   <script>
-    /* Configuración de WhatsApp */
-    const WHATSAPP_PHONE = '5491100000000';
-    const WHATSAPP_MESSAGE = '¡Hola! Acabo de ganar el laberinto de la fortuna El Rey 🍀🎁 ¡Quiero cobrar mi premio!';
+    /* =========================================================================
+       1. REDIRECCIÓN A WHATSAPP SIN NÚMERO FIJO (WEB SHARE API + UNIVERSAL URL)
+       ========================================================================= */
+    const VICTORY_SHARE_TEXT = '¡Hola! Acabo de ganar el laberinto de la fortuna El Rey 🍀🎁 ¡Quiero cobrar mi premio!';
 
-    function buildWhatsAppUrl() {
-      const encodedMsg = encodeURIComponent(WHATSAPP_MESSAGE);
-      return `https://wa.me/${WHATSAPP_PHONE}?text=${encodedMsg}`;
+    async function claimPrizeUniversal() {
+      const shareData = {
+        title: 'El Rey - Laberinto de la Fortuna',
+        text: VICTORY_SHARE_TEXT
+      };
+
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        try {
+          await navigator.share(shareData);
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return;
+        }
+      }
+
+      const encodedMsg = encodeURIComponent(VICTORY_SHARE_TEXT);
+      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMsg}`;
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
     }
 
-    /* Generador DFS con Matriz (0 = Muro, 1 = Camino libre) */
+    /* Generador DFS de laberinto (0 = Muro, 1 = Camino libre) */
     function generateDFSMaze(cols, rows) {
       const width = cols % 2 === 0 ? cols + 1 : cols;
       const height = rows % 2 === 0 ? rows + 1 : rows;
@@ -365,7 +376,7 @@
       };
     }
 
-    /* Efectos de Sonido con Web Audio API */
+    /* Sonidos con Web Audio API */
     class SoundFX {
       constructor() {
         this.ctx = null;
@@ -418,7 +429,7 @@
 
     const sound = new SoundFX();
 
-    /* Escena de Phaser 3 adaptada a pantalla completa con deslizamiento fluido */
+    /* Escena de Phaser 3 con Sliding Collisions y 60 FPS */
     class CasinoMazeScene extends Phaser.Scene {
       constructor() {
         super({ key: 'CasinoMazeScene' });
@@ -439,7 +450,6 @@
         this.startSingleGame();
         this.setupTouchControls();
 
-        // Reajustar cuadrícula si el celular rota o cambia el tamaño
         this.scale.on('resize', () => {
           this.startSingleGame();
         });
@@ -487,10 +497,6 @@
         const canvasW = this.cameras.main.width;
         const canvasH = this.cameras.main.height;
 
-        // Distribución en porcentajes:
-        // 25% superior: Blasón y cabecera del flyer
-        // 53% central: Satén azul donde se expande el laberinto
-        // 22% inferior: Texto de instrucción y logos
         const minX = canvasW * 0.08;
         const maxX = canvasW * 0.92;
         const minY = canvasH * 0.25;
@@ -728,55 +734,61 @@
         return false;
       }
 
+      /* Sistema de deslizamiento vectorial continuo sin bloqueos */
       stepSmoothMovement() {
         if (!this.isDragging || this.isGameFinished || !this.player) return;
 
         const currentX = this.player.x;
         const currentY = this.player.y;
-        const dx = this.targetTouchX - currentX;
-        const dy = this.targetTouchY - currentY;
-        const dist = Math.hypot(dx, dy);
+        const vx = this.targetTouchX - currentX;
+        const vy = this.targetTouchY - currentY;
+        const dist = Math.hypot(vx, vy);
 
-        if (dist < 0.5) return;
+        if (dist < 0.25) return;
 
-        const lerpFactor = 0.32;
-        const moveDist = Math.min(dist, Math.max(dist * lerpFactor, 1.5));
-        const angle = Math.atan2(dy, dx);
+        const lerp = 0.45;
+        const speed = Math.min(dist, Math.max(dist * lerp, 2.0));
+        const angle = Math.atan2(vy, vx);
 
-        const deltaX = Math.cos(angle) * moveDist;
-        const deltaY = Math.sin(angle) * moveDist;
+        const deltaX = Math.cos(angle) * speed;
+        const deltaY = Math.sin(angle) * speed;
 
-        const maxStepSize = 2.0;
-        const steps = Math.ceil(Math.max(Math.abs(deltaX), Math.abs(deltaY)) / maxStepSize) || 1;
-        const stepX = deltaX / steps;
-        const stepY = deltaY / steps;
+        const subSteps = Math.ceil(Math.max(Math.abs(deltaX), Math.abs(deltaY)) / 1.5) || 1;
+        const stepX = deltaX / subSteps;
+        const stepY = deltaY / subSteps;
 
         let posX = currentX;
         let posY = currentY;
         const r = this.playerRadius;
 
-        for (let i = 0; i < steps; i++) {
-          // 1. DESLIZAMIENTO EN X
-          const nextX = posX + stepX;
-          if (!this.isCollidingWithWalls(nextX, posY, r)) {
-            posX = nextX;
-          } else {
-            const cellCenterY = this.offsetY + Math.floor((posY - this.offsetY) / this.tileSize) * this.tileSize + this.tileSize / 2;
-            const nudgeY = (cellCenterY - posY) * 0.18;
-            if (Math.abs(nudgeY) > 0.2 && !this.isCollidingWithWalls(posX, posY + nudgeY, r)) {
-              posY += nudgeY;
-            }
-          }
+        for (let i = 0; i < subSteps; i++) {
+          const testBothX = posX + stepX;
+          const testBothY = posY + stepY;
 
-          // 2. DESLIZAMIENTO EN Y
-          const nextY = posY + stepY;
-          if (!this.isCollidingWithWalls(posX, nextY, r)) {
-            posY = nextY;
+          if (!this.isCollidingWithWalls(testBothX, testBothY, r)) {
+            posX = testBothX;
+            posY = testBothY;
           } else {
-            const cellCenterX = this.offsetX + Math.floor((posX - this.offsetX) / this.tileSize) * this.tileSize + this.tileSize / 2;
-            const nudgeX = (cellCenterX - posX) * 0.18;
-            if (Math.abs(nudgeX) > 0.2 && !this.isCollidingWithWalls(posX + nudgeX, posY, r)) {
-              posX += nudgeX;
+            // Deslizamiento en X
+            if (stepX !== 0 && !this.isCollidingWithWalls(posX + stepX, posY, r)) {
+              posX += stepX;
+            } else {
+              const cellCenterY = this.offsetY + Math.floor((posY - this.offsetY) / this.tileSize) * this.tileSize + this.tileSize / 2;
+              const correctY = (cellCenterY - posY) * 0.22;
+              if (Math.abs(correctY) > 0.1 && !this.isCollidingWithWalls(posX, posY + correctY, r)) {
+                posY += correctY;
+              }
+            }
+
+            // Deslizamiento en Y
+            if (stepY !== 0 && !this.isCollidingWithWalls(posX, posY + stepY, r)) {
+              posY += stepY;
+            } else {
+              const cellCenterX = this.offsetX + Math.floor((posX - this.offsetX) / this.tileSize) * this.tileSize + this.tileSize / 2;
+              const correctX = (cellCenterX - posX) * 0.22;
+              if (Math.abs(correctX) > 0.1 && !this.isCollidingWithWalls(posX + correctX, posY, r)) {
+                posX += correctX;
+              }
             }
           }
         }
@@ -817,9 +829,6 @@
           duration: 320,
           ease: 'Back.easeOut'
         });
-
-        const claimBtn = document.getElementById('btn-claim-prize');
-        claimBtn.href = buildWhatsAppUrl();
 
         setTimeout(() => {
           document.getElementById('victory-modal').classList.add('active');
@@ -877,6 +886,11 @@
     document.getElementById('btn-modal-retry').addEventListener('click', () => {
       const scene = game.scene.getScene('CasinoMazeScene');
       if (scene) scene.resetGame();
+    });
+
+    document.getElementById('btn-claim-prize').addEventListener('click', (e) => {
+      e.preventDefault();
+      claimPrizeUniversal();
     });
   </script>
 </body>
