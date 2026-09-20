@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>El Rey - Laberinto de la Fortuna</title>
   <meta name="description" content="Laberinto de la fortuna temático 'El Rey'. Arrastra el trébol hacia el regalo y llévate tu extra por WhatsApp." />
   <meta property="og:title" content="El Rey - Laberinto de la Fortuna" />
@@ -23,81 +23,75 @@
       -webkit-touch-callout: none;
     }
 
+    /* 1 y 2. Ocupar el 100% de la pantalla del celular sin márgenes ni scroll */
     body, html {
-      width: 100%;
-      height: 100%;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
       overflow: hidden;
-      background-color: #030712;
+      position: fixed;
+      inset: 0;
+      background-color: #08122d;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
     }
 
-    /* Marco vertical con proporción 3:4 que encaja exactamente con la medida de 'fondo.png' */
+    /* 3. Contenedor principal de borde a borde (Full Screen) con fondo estirado sin franjas */
     #app-wrapper {
       position: relative;
-      width: 100%;
-      max-width: 410px;
-      height: auto;
-      aspect-ratio: 3 / 4;
-      max-height: 96vh;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
-      /* Carga el archivo fondo.png que subirás a GitHub con respaldo de azul zafiro */
       background-color: #08122d;
       background-image: url('fondo.png');
       background-position: center center;
       background-repeat: no-repeat;
       background-size: 100% 100%;
-      box-shadow: 0 0 50px rgba(234, 179, 8, 0.28), 0 25px 60px -15px rgba(0, 0, 0, 0.95);
-      border: 2px solid rgba(250, 204, 21, 0.45);
-      border-radius: 22px;
-      overflow: hidden;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
     }
 
-    /* Botones flotantes compactos en la esquina superior derecha */
+    /* Controles flotantes en la parte superior */
     #floating-controls {
       position: absolute;
-      top: 10px;
-      right: 10px;
+      top: max(12px, env(safe-area-inset-top));
+      right: max(12px, env(safe-area-inset-right));
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       z-index: 30;
     }
 
     .glass-btn {
-      background: rgba(10, 25, 69, 0.72);
+      background: rgba(10, 25, 69, 0.75);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(250, 204, 21, 0.55);
+      border: 1px solid rgba(250, 204, 21, 0.6);
       color: #fef08a;
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 15px;
       transition: all 0.2s ease;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6), 0 0 8px rgba(234, 179, 8, 0.25);
-    }
-
-    .glass-btn:hover {
-      background: rgba(30, 58, 138, 0.9);
-      border-color: #fde047;
-      transform: scale(1.08);
-      box-shadow: 0 0 14px rgba(250, 204, 21, 0.6);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 10px rgba(234, 179, 8, 0.3);
     }
 
     .glass-btn:active {
       transform: scale(0.92);
     }
 
-    /* Contenedor transparente del juego Phaser */
+    /* Área flexible de Phaser a pantalla completa */
     #game-container {
       flex: 1;
       width: 100%;
@@ -108,6 +102,7 @@
       align-items: center;
       justify-content: center;
       background: transparent;
+      overflow: hidden;
     }
 
     #game-container canvas {
@@ -116,18 +111,20 @@
       background: transparent !important;
     }
 
-    /* Pop-up flotante de Victoria ("¡Felicitaciones!") */
+    /* Pop-up de Victoria */
     #victory-modal {
       position: absolute;
       inset: 0;
-      background: rgba(3, 7, 18, 0.86);
+      width: 100vw;
+      height: 100vh;
+      background: rgba(3, 7, 18, 0.88);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       display: none;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 24px;
       z-index: 50;
       animation: popIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
@@ -137,7 +134,7 @@
     }
 
     @keyframes popIn {
-      from { opacity: 0; transform: scale(0.9) translateY(16px); }
+      from { opacity: 0; transform: scale(0.92) translateY(16px); }
       to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
@@ -145,23 +142,21 @@
       background: linear-gradient(180deg, #0f1c3f 0%, #060c20 100%);
       border: 2px solid #facc15;
       border-radius: 26px;
-      padding: 28px 22px 22px 22px;
-      width: 100%;
-      max-width: 320px;
+      padding: 28px 24px 22px 24px;
+      width: 90%;
+      max-width: 340px;
       text-align: center;
-      box-shadow: 0 0 35px rgba(250, 204, 21, 0.45), 0 0 15px rgba(234, 179, 8, 0.3), 0 25px 45px rgba(0, 0, 0, 0.95);
-      position: relative;
+      box-shadow: 0 0 35px rgba(250, 204, 21, 0.45), 0 25px 50px rgba(0, 0, 0, 0.95);
     }
 
-    /* Marco circular dorado con logo.png opcional */
     .golden-frame-placeholder {
-      width: 82px;
-      height: 82px;
+      width: 84px;
+      height: 84px;
       margin: 0 auto 16px auto;
       border-radius: 50%;
-      background: rgba(8, 17, 43, 0.55);
+      background: rgba(8, 17, 43, 0.6);
       border: 3px solid #facc15;
-      box-shadow: 0 0 22px rgba(250, 204, 21, 0.45), inset 0 0 14px rgba(234, 179, 8, 0.25);
+      box-shadow: 0 0 22px rgba(250, 204, 21, 0.5);
       position: relative;
       display: flex;
       align-items: center;
@@ -181,20 +176,18 @@
       color: #ffffff;
       font-size: 26px;
       font-weight: 800;
-      letter-spacing: -0.5px;
       margin-bottom: 6px;
       text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
     }
 
     .victory-subtitle {
       color: #ffffff;
-      font-size: 13.5px;
+      font-size: 14px;
       line-height: 1.45;
       margin-bottom: 22px;
       opacity: 0.92;
     }
 
-    /* Botón verde de WhatsApp "Cobrar Premio" */
     .btn-claim {
       width: 100%;
       background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
@@ -209,17 +202,10 @@
       align-items: center;
       justify-content: center;
       gap: 10px;
-      box-shadow: 0 0 28px rgba(34, 197, 94, 0.5), 0 4px 14px rgba(0, 0, 0, 0.4);
-      transition: all 0.25s ease;
+      box-shadow: 0 0 28px rgba(34, 197, 94, 0.5);
       margin-bottom: 12px;
       text-decoration: none;
       letter-spacing: 0.3px;
-    }
-
-    .btn-claim:hover {
-      background: linear-gradient(135deg, #25d366 0%, #15803d 100%);
-      transform: translateY(-2px);
-      box-shadow: 0 0 36px rgba(37, 211, 102, 0.7);
     }
 
     .btn-claim:active {
@@ -232,45 +218,39 @@
       fill: currentColor;
     }
 
-    /* Botón secundario oscuro */
     .btn-retry {
       width: 100%;
       background: #09132d;
       color: #facc15;
       border: 1px solid rgba(250, 204, 21, 0.5);
-      padding: 12px 16px;
+      padding: 13px 16px;
       border-radius: 14px;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s ease;
     }
 
-    .btn-retry:hover {
-      background: rgba(250, 204, 21, 0.12);
-      border-color: #fde047;
-      color: #fef08a;
-      transform: translateY(-1px);
+    .btn-retry:active {
+      transform: translateY(1px);
     }
 
-    /* Toast */
     #toast {
       position: absolute;
-      bottom: 18px;
+      bottom: max(20px, env(safe-area-inset-bottom));
       left: 50%;
       transform: translateX(-50%) translateY(20px);
-      background: rgba(10, 25, 69, 0.92);
+      background: rgba(10, 25, 69, 0.94);
       border: 1px solid #eab308;
       color: #fef08a;
-      padding: 6px 16px;
+      padding: 8px 18px;
       border-radius: 9999px;
-      font-size: 11.5px;
+      font-size: 12px;
       font-weight: 600;
       opacity: 0;
       pointer-events: none;
       transition: all 0.25s ease;
       z-index: 100;
-      box-shadow: 0 0 16px rgba(234, 179, 8, 0.35);
+      box-shadow: 0 0 18px rgba(234, 179, 8, 0.4);
     }
 
     #toast.show {
@@ -287,7 +267,7 @@
       <button class="glass-btn" id="btn-restart" title="Nuevo Laberinto">🔄</button>
     </div>
 
-    <!-- Contenedor Phaser -->
+    <!-- Contenedor del Juego -->
     <main id="game-container"></main>
 
     <!-- Modal de Victoria -->
@@ -385,7 +365,7 @@
       };
     }
 
-    /* Sonidos Web Audio API */
+    /* Efectos de Sonido con Web Audio API */
     class SoundFX {
       constructor() {
         this.ctx = null;
@@ -438,7 +418,7 @@
 
     const sound = new SoundFX();
 
-    /* Escena de Phaser 3 con Movimiento Fluido y Deslizamiento */
+    /* Escena de Phaser 3 adaptada a pantalla completa con deslizamiento fluido */
     class CasinoMazeScene extends Phaser.Scene {
       constructor() {
         super({ key: 'CasinoMazeScene' });
@@ -455,18 +435,14 @@
       create() {
         this.physics.world.setFPS(120);
 
-        const canvasW = this.cameras.main.width;
-        const canvasH = this.cameras.main.height;
-
-        if (this.textures.exists('fondo') && this.textures.get('fondo').key !== '__MISSING') {
-          const bg = this.add.image(canvasW / 2, canvasH / 2, 'fondo');
-          bg.setDisplaySize(canvasW, canvasH);
-          bg.setDepth(-10);
-        }
-
         this.createCasinoTextures();
         this.startSingleGame();
         this.setupTouchControls();
+
+        // Reajustar cuadrícula si el celular rota o cambia el tamaño
+        this.scale.on('resize', () => {
+          this.startSingleGame();
+        });
       }
 
       createCasinoTextures() {
@@ -511,10 +487,14 @@
         const canvasW = this.cameras.main.width;
         const canvasH = this.cameras.main.height;
 
-        const minX = canvasW * 0.164;
-        const maxX = canvasW * 0.836;
-        const minY = canvasH * 0.256;
-        const maxY = canvasH * 0.798;
+        // Distribución en porcentajes:
+        // 25% superior: Blasón y cabecera del flyer
+        // 53% central: Satén azul donde se expande el laberinto
+        // 22% inferior: Texto de instrucción y logos
+        const minX = canvasW * 0.08;
+        const maxX = canvasW * 0.92;
+        const minY = canvasH * 0.25;
+        const maxY = canvasH * 0.78;
 
         const availableW = maxX - minX;
         const availableH = maxY - minY;
@@ -527,11 +507,10 @@
         this.mazeWidth = mazeData.width;
         this.mazeHeight = mazeData.height;
 
-        this.tileSize = Math.min(
-          Math.floor(availableW / this.mazeWidth),
-          Math.floor(availableH / this.mazeHeight),
-          32
-        );
+        this.tileSize = Math.floor(Math.min(
+          availableW / this.mazeWidth,
+          availableH / this.mazeHeight
+        ));
 
         const mazePixelW = this.mazeWidth * this.tileSize;
         const mazePixelH = this.mazeHeight * this.tileSize;
@@ -560,7 +539,7 @@
               wall.setDisplaySize(this.tileSize, this.tileSize);
               wall.refreshBody();
             } else {
-              const dot = this.add.circle(posX, posY, 1.8, 0xfacc15, 0.5);
+              const dot = this.add.circle(posX, posY, Math.max(1.5, this.tileSize * 0.08), 0xfacc15, 0.45);
               this.pathDots.add(dot);
             }
           }
@@ -777,7 +756,7 @@
         const r = this.playerRadius;
 
         for (let i = 0; i < steps; i++) {
-          // 1. DESLIZAMIENTO EN EJE X
+          // 1. DESLIZAMIENTO EN X
           const nextX = posX + stepX;
           if (!this.isCollidingWithWalls(nextX, posY, r)) {
             posX = nextX;
@@ -789,7 +768,7 @@
             }
           }
 
-          // 2. DESLIZAMIENTO EN EJE Y
+          // 2. DESLIZAMIENTO EN Y
           const nextY = posY + stepY;
           if (!this.isCollidingWithWalls(posX, nextY, r)) {
             posY = nextY;
@@ -857,15 +836,13 @@
     const config = {
       type: Phaser.AUTO,
       parent: 'game-container',
-      width: 390,
-      height: 520,
-      transparent: true,
       scale: {
-        mode: Phaser.Scale.FIT,
+        mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 390,
-        height: 520
+        width: '100%',
+        height: '100%'
       },
+      transparent: true,
       physics: {
         default: 'arcade',
         arcade: {
