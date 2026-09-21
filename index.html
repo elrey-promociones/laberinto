@@ -47,7 +47,7 @@
       display: flex;
       flex-direction: column;
       background-color: #08122d;
-      background-image: url('fondo.png');
+      background-image: url('fondo.jpg');
       background-position: center center;
       background-repeat: no-repeat;
       background-size: 100% 100%;
@@ -269,7 +269,7 @@
     <div id="victory-modal">
       <div class="victory-card">
         <div class="golden-frame-placeholder">
-          <img src="logo.png" alt="Logotipo" onerror="this.style.display='none'" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; padding: 6px; display: block;" />
+          <img src="logo.jpg" alt="Logotipo" onerror="this.style.display='none'" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; padding: 6px; display: block;" />
         </div>
 
         <h2 class="victory-title">¡Felicitaciones!</h2>
@@ -376,6 +376,110 @@
       };
     }
 
+    /* =========================================================================
+       2. MOTOR DE COLISIONES CON DESLIZAMIENTO SUAVE Y CLAMPING DE BORDES
+       ========================================================================= */
+    class MazeCollisionController {
+      constructor(mazeGrid, tileSize, offsetX, offsetY, mazeWidth, mazeHeight) {
+        this.grid = mazeGrid;
+        this.tileSize = tileSize;
+        this.offsetX = offsetX;
+        this.offsetY = offsetY;
+        this.width = mazeWidth;
+        this.height = mazeHeight;
+      }
+
+      isSolidTile(c, r) {
+        if (c < 0 || c >= this.width || r < 0 || r >= this.height) {
+          return true;
+        }
+        return this.grid[r][c] === 0;
+      }
+
+      checkCircleAABB(cx, cy, radius, tileLeft, tileTop, tileRight, tileBottom) {
+        const closestX = Math.max(tileLeft, Math.min(cx, tileRight));
+        const closestY = Math.max(tileTop, Math.min(cy, tileBottom));
+
+        const distX = cx - closestX;
+        const distY = cy - closestY;
+        const distSq = distX * distX + distY * distY;
+
+        if (distSq < radius * radius) {
+          const distance = Math.sqrt(distSq);
+          if (distance > 0.00001) {
+            return {
+              collided: true,
+              normalX: distX / distance,
+              normalY: distY / distance,
+              overlap: radius - distance
+            };
+          } else {
+            return { collided: true, normalX: 0, normalY: -1, overlap: radius };
+          }
+        }
+
+        return { collided: false, normalX: 0, normalY: 0, overlap: 0 };
+      }
+
+      moveAxis(currentX, currentY, delta, axis, radius) {
+        let targetX = axis === 'x' ? currentX + delta : currentX;
+        let targetY = axis === 'y' ? currentY + delta : currentY;
+
+        const minCol = Math.floor((targetX - radius - this.offsetX) / this.tileSize);
+        const maxCol = Math.floor((targetX + radius - this.offsetX) / this.tileSize);
+        const minRow = Math.floor((targetY - radius - this.offsetY) / this.tileSize);
+        const maxRow = Math.floor((targetY + radius - this.offsetY) / this.tileSize);
+
+        for (let r = minRow; r <= maxRow; r++) {
+          for (let c = minCol; c <= maxCol; c++) {
+            if (!this.isSolidTile(c, r)) continue;
+
+            const tileLeft = this.offsetX + c * this.tileSize;
+            const tileTop = this.offsetY + r * this.tileSize;
+            const tileRight = tileLeft + this.tileSize;
+            const tileBottom = tileTop + this.tileSize;
+
+            const hit = this.checkCircleAABB(targetX, targetY, radius, tileLeft, tileTop, tileRight, tileBottom);
+            if (hit.collided) {
+              targetX += hit.normalX * hit.overlap;
+              targetY += hit.normalY * hit.overlap;
+            }
+          }
+        }
+
+        return axis === 'x' ? targetX : targetY;
+      }
+
+      resolveSmoothSlide(currentX, currentY, targetX, targetY, radius) {
+        const vx = targetX - currentX;
+        const vy = targetY - currentY;
+        const totalDist = Math.hypot(vx, vy);
+
+        if (totalDist < 0.2) {
+          return { x: currentX, y: currentY };
+        }
+
+        const maxStepSize = Math.max(1.0, radius * 0.4);
+        const subSteps = Math.ceil(totalDist / maxStepSize);
+        const stepDx = vx / subSteps;
+        const stepDy = vy / subSteps;
+
+        let posX = currentX;
+        let posY = currentY;
+
+        for (let i = 0; i < subSteps; i++) {
+          if (stepDx !== 0) {
+            posX = this.moveAxis(posX, posY, stepDx, 'x', radius);
+          }
+          if (stepDy !== 0) {
+            posY = this.moveAxis(posX, posY, stepDy, 'y', radius);
+          }
+        }
+
+        return { x: posX, y: posY };
+      }
+    }
+
     /* Sonidos con Web Audio API */
     class SoundFX {
       constructor() {
@@ -429,18 +533,19 @@
 
     const sound = new SoundFX();
 
-    /* Escena de Phaser 3 con Sliding Collisions y 60 FPS */
+    /* Escena de Phaser 3 */
     class CasinoMazeScene extends Phaser.Scene {
       constructor() {
         super({ key: 'CasinoMazeScene' });
         this.isDragging = false;
         this.isGameFinished = false;
         this.rafId = null;
+        this.collisionController = null;
       }
 
       preload() {
-        this.load.image('fondo', 'fondo.png');
-        this.load.image('regalo', 'regalo.png');
+        this.load.image('fondo', 'fondo.jpg');
+        this.load.image('regalo', 'regalo.jpg');
       }
 
       create() {
@@ -522,6 +627,15 @@
         const mazePixelH = this.mazeHeight * this.tileSize;
         this.offsetX = Math.floor(minX + (availableW - mazePixelW) / 2);
         this.offsetY = Math.floor(minY + (availableH - mazePixelH) / 2);
+
+        this.collisionController = new MazeCollisionController(
+          this.mazeGrid,
+          this.tileSize,
+          this.offsetX,
+          this.offsetY,
+          this.mazeWidth,
+          this.mazeHeight
+        );
 
         if (this.walls) this.walls.clear(true, true);
         if (this.player) this.player.destroy();
@@ -704,103 +818,32 @@
         this.rafId = requestAnimationFrame(loop);
       }
 
-      isCollidingWithWalls(x, y, radius) {
-        const minCol = Math.floor((x - radius - this.offsetX) / this.tileSize);
-        const maxCol = Math.floor((x + radius - this.offsetX) / this.tileSize);
-        const minRow = Math.floor((y - radius - this.offsetY) / this.tileSize);
-        const maxRow = Math.floor((y + radius - this.offsetY) / this.tileSize);
-
-        for (let r = minRow; r <= maxRow; r++) {
-          for (let c = minCol; c <= maxCol; c++) {
-            const isSolid = (r < 0 || r >= this.mazeHeight || c < 0 || c >= this.mazeWidth) || (this.mazeGrid[r][c] === 0);
-            if (isSolid) {
-              const wx1 = this.offsetX + c * this.tileSize;
-              const wy1 = this.offsetY + r * this.tileSize;
-              const wx2 = wx1 + this.tileSize;
-              const wy2 = wy1 + this.tileSize;
-
-              const closestX = Math.max(wx1, Math.min(x, wx2));
-              const closestY = Math.max(wy1, Math.min(y, wy2));
-
-              const diffX = x - closestX;
-              const diffY = y - closestY;
-
-              if ((diffX * diffX + diffY * diffY) < (radius * radius)) {
-                return true;
-              }
-            }
-          }
-        }
-        return false;
-      }
-
-      /* Sistema de deslizamiento vectorial continuo sin bloqueos */
       stepSmoothMovement() {
-        if (!this.isDragging || this.isGameFinished || !this.player) return;
+        if (!this.isDragging || this.isGameFinished || !this.player || !this.collisionController) return;
 
         const currentX = this.player.x;
         const currentY = this.player.y;
-        const vx = this.targetTouchX - currentX;
-        const vy = this.targetTouchY - currentY;
-        const dist = Math.hypot(vx, vy);
 
-        if (dist < 0.25) return;
+        const lerpFactor = 0.45;
+        const targetX = currentX + (this.targetTouchX - currentX) * lerpFactor;
+        const targetY = currentY + (this.targetTouchY - currentY) * lerpFactor;
 
-        const lerp = 0.45;
-        const speed = Math.min(dist, Math.max(dist * lerp, 2.0));
-        const angle = Math.atan2(vy, vx);
+        const nextPos = this.collisionController.resolveSmoothSlide(
+          currentX,
+          currentY,
+          targetX,
+          targetY,
+          this.playerRadius
+        );
 
-        const deltaX = Math.cos(angle) * speed;
-        const deltaY = Math.sin(angle) * speed;
-
-        const subSteps = Math.ceil(Math.max(Math.abs(deltaX), Math.abs(deltaY)) / 1.5) || 1;
-        const stepX = deltaX / subSteps;
-        const stepY = deltaY / subSteps;
-
-        let posX = currentX;
-        let posY = currentY;
-        const r = this.playerRadius;
-
-        for (let i = 0; i < subSteps; i++) {
-          const testBothX = posX + stepX;
-          const testBothY = posY + stepY;
-
-          if (!this.isCollidingWithWalls(testBothX, testBothY, r)) {
-            posX = testBothX;
-            posY = testBothY;
-          } else {
-            // Deslizamiento en X
-            if (stepX !== 0 && !this.isCollidingWithWalls(posX + stepX, posY, r)) {
-              posX += stepX;
-            } else {
-              const cellCenterY = this.offsetY + Math.floor((posY - this.offsetY) / this.tileSize) * this.tileSize + this.tileSize / 2;
-              const correctY = (cellCenterY - posY) * 0.22;
-              if (Math.abs(correctY) > 0.1 && !this.isCollidingWithWalls(posX, posY + correctY, r)) {
-                posY += correctY;
-              }
-            }
-
-            // Deslizamiento en Y
-            if (stepY !== 0 && !this.isCollidingWithWalls(posX, posY + stepY, r)) {
-              posY += stepY;
-            } else {
-              const cellCenterX = this.offsetX + Math.floor((posX - this.offsetX) / this.tileSize) * this.tileSize + this.tileSize / 2;
-              const correctX = (cellCenterX - posX) * 0.22;
-              if (Math.abs(correctX) > 0.1 && !this.isCollidingWithWalls(posX + correctX, posY, r)) {
-                posX += correctX;
-              }
-            }
-          }
-        }
-
-        this.player.setPosition(posX, posY);
+        this.player.setPosition(nextPos.x, nextPos.y);
         if (this.playerAura) {
-          this.playerAura.setPosition(posX, posY);
+          this.playerAura.setPosition(nextPos.x, nextPos.y);
         }
 
         const goalCenterX = this.offsetX + this.goalGridCol * this.tileSize + this.tileSize / 2;
         const goalCenterY = this.offsetY + this.goalGridRow * this.tileSize + this.tileSize / 2;
-        if (Math.hypot(posX - goalCenterX, posY - goalCenterY) < this.tileSize * 0.52) {
+        if (Math.hypot(nextPos.x - goalCenterX, nextPos.y - goalCenterY) < this.tileSize * 0.52) {
           this.handleVictory();
         }
       }
