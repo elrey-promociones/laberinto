@@ -23,7 +23,7 @@
       -webkit-touch-callout: none;
     }
 
-    /* 1. Fondo envolvente para eliminar cualquier borde negro */
+    /* Fondo envolvente general */
     html, body {
       width: 100vw;
       height: 100dvh;
@@ -52,7 +52,7 @@
       z-index: 1;
     }
 
-    /* 2. Contenedor principal */
+    /* Contenedor del juego */
     #app-wrapper {
       position: relative;
       z-index: 2;
@@ -73,7 +73,7 @@
       background-size: contain; 
     }
 
-    /* 3. Botones superiores */
+    /* Botones superiores */
     #floating-controls {
       position: absolute;
       top: max(12px, env(safe-area-inset-top));
@@ -106,7 +106,7 @@
       transform: scale(0.92);
     }
 
-    /* 4. Área jugable del laberinto */
+    /* Área jugable */
     #game-container {
       position: absolute;
       top: 17%;
@@ -132,7 +132,7 @@
       object-fit: contain;
     }
 
-    /* 5. Modal de Victoria */
+    /* Modal de Victoria */
     #victory-modal {
       position: absolute;
       inset: 0;
@@ -171,15 +171,13 @@
     }
 
     /* =========================================================================
-       6. SOLUCIÓN EXACTA PARA logo.jpg
-       Quitamos el borde externo duplicado y hacemos que el borde dorado de tu
-       propia imagen llene el 100% del contenedor sin espacios negros ni desfasajes.
+       LOGO CIRCULAR: Centrado exacto sin lunas ni desfasajes
        ========================================================================= */
     .golden-frame-placeholder {
-      width: 110px;
-      height: 110px;
-      min-width: 110px;
-      min-height: 110px;
+      width: 105px;
+      height: 105px;
+      min-width: 105px;
+      min-height: 105px;
       aspect-ratio: 1 / 1;
       margin: 0 auto 16px auto;
       border-radius: 50%;
@@ -189,9 +187,9 @@
       justify-content: center;
       padding: 0;
       position: relative;
-      background: transparent;
-      /* Sombra dorada exterior que realza el brillo de tu logo */
-      box-shadow: 0 0 25px rgba(250, 204, 21, 0.7);
+      background: #08112b;
+      border: 2px solid #facc15;
+      box-shadow: 0 0 25px rgba(250, 204, 21, 0.75);
     }
 
     .golden-frame-placeholder .modal-logo {
@@ -202,9 +200,9 @@
       display: block;
       margin: 0;
       padding: 0;
-      /* Escala hacia afuera para que el aro dorado propio del logo toque los bordes */
       object-fit: cover;
-      transform: scale(1.35) translate(3%, 3%);
+      /* Corrección de escala y traslación para centrar el león y el personaje */
+      transform: scale(1.48) translate(-6.5%, -8.5%);
       transform-origin: center center;
     }
 
@@ -270,7 +268,7 @@
       transform: translateY(1px);
     }
 
-    /* 7. Toast en la parte superior para no tapar el texto inferior */
+    /* Toast superior */
     #toast {
       position: absolute;
       top: max(60px, calc(env(safe-area-inset-top) + 50px));
@@ -311,7 +309,7 @@
     <!-- Contenedor del Juego -->
     <main id="game-container"></main>
 
-    <!-- Modal de Victoria con Logo Rellenando al 100% -->
+    <!-- Modal de Victoria con Logo Centrado -->
     <div id="victory-modal">
       <div class="victory-card">
         <div class="golden-frame-placeholder">
