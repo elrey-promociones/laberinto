@@ -23,7 +23,7 @@
       -webkit-touch-callout: none;
     }
 
-    /* 1. Base del Viewport sin barras de scroll y adaptado a móviles */
+    /* 1. Base del Viewport sin barras de desplazamiento */
     html, body {
       width: 100vw;
       height: 100dvh;
@@ -39,69 +39,36 @@
       justify-content: center;
     }
 
-    /* 2. Contenedor principal con relación de aspecto protegida (evita cortes y alargamiento) */
+    /* 2. Contenedor principal: pantalla completa sin deformar las esquinas ni cortar el pie */
     #app-wrapper {
       position: relative;
-      width: 100%;
-      height: 100%;
+      width: 100vw;
+      height: 100dvh;
       max-height: 100dvh;
-      max-width: calc(100dvh * 9 / 16);
-      aspect-ratio: 9 / 16;
-      margin: auto;
+      max-width: min(100vw, calc(100dvh * (9 / 16)));
+      margin: 0 auto;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
       background-color: #08122d;
       background-image: url('fondo.jpg');
       background-position: center center;
       background-repeat: no-repeat;
       background-size: contain;
-      overflow: hidden;
-      border: none;
-      border-radius: 0;
-      box-shadow: 0 0 40px rgba(0, 0, 0, 0.9);
+      box-shadow: 0 0 45px rgba(0, 0, 0, 0.95);
     }
 
-    /* 3. Logotipos / Avatares de las esquinas perfectamente circulares (relación 1:1) */
-    .corner-badge {
-      position: absolute;
-      z-index: 25;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: clamp(46px, 12.5vw, 64px);
-      height: clamp(46px, 12.5vw, 64px);
-      aspect-ratio: 1 / 1;
-      flex-shrink: 0;
-      border-radius: 50%;
-      border: 2px solid #facc15;
-      background: radial-gradient(circle, #0f245c 0%, #060e24 100%);
-      box-shadow: 0 0 14px rgba(250, 204, 21, 0.45), 0 4px 10px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
+    /* En pantallas con relación de aspecto móvil estricta, llena el 100% */
+    @media (max-aspect-ratio: 9/16) {
+      #app-wrapper {
+        width: 100vw;
+        height: 100dvh;
+        max-width: 100vw;
+        background-size: 100% 100%;
+      }
     }
 
-    .corner-badge.top-left {
-      top: max(12px, env(safe-area-inset-top));
-      left: max(12px, env(safe-area-inset-left));
-    }
-
-    .corner-badge.bottom-right {
-      bottom: max(12px, env(safe-area-inset-bottom));
-      right: max(12px, env(safe-area-inset-right));
-    }
-
-    .corner-badge img {
-      width: 100%;
-      height: 100%;
-      aspect-ratio: 1 / 1;
-      object-fit: cover;
-      border-radius: 50%;
-      display: block;
-      user-select: none;
-      -webkit-user-drag: none;
-    }
-
-    /* 4. Controles flotantes superiores */
+    /* 3. Controles flotantes superiores */
     #floating-controls {
       position: absolute;
       top: max(12px, env(safe-area-inset-top));
@@ -134,11 +101,11 @@
       transform: scale(0.92);
     }
 
-    /* 5. Área del juego restringida para no tapar cabecera ni texto inferior */
+    /* 4. Área jugable restringida para no tapar el texto inferior ni la cabecera */
     #game-container {
       position: absolute;
-      top: 17%;
-      bottom: 22%;
+      top: 17.5%;
+      bottom: 21.5%;
       left: 0;
       right: 0;
       width: 100%;
@@ -160,7 +127,7 @@
       object-fit: contain;
     }
 
-    /* 6. Modal de Victoria */
+    /* 5. Modal de Victoria y Ajuste Completo de logo.jpg */
     #victory-modal {
       position: absolute;
       inset: 0;
@@ -198,36 +165,49 @@
       box-shadow: 0 0 35px rgba(250, 204, 21, 0.45), 0 25px 50px rgba(0, 0, 0, 0.95);
     }
 
+    /* Contenedor del círculo dorado: 1:1 estricto con recorte de bordes */
     .golden-frame-placeholder {
-      width: 84px;
-      height: 84px;
+      width: 90px;
+      height: 90px;
+      min-width: 90px;
+      min-height: 90px;
+      aspect-ratio: 1 / 1;
       margin: 0 auto 16px auto;
       border-radius: 50%;
-      background: rgba(8, 17, 43, 0.6);
+      background: #08112b;
       border: 3px solid #facc15;
-      box-shadow: 0 0 22px rgba(250, 204, 21, 0.5);
+      box-shadow: 0 0 22px rgba(250, 204, 21, 0.55), inset 0 0 10px rgba(0, 0, 0, 0.6);
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* Ajuste de logo.jpg para rellenar completamente el círculo */
+    .golden-frame-placeholder .modal-logo {
+      width: 100%;
+      height: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      object-position: center center;
+      border-radius: 50%;
+      display: block;
+      margin: 0;
+      padding: 0;
+      border: none;
     }
 
     .golden-frame-placeholder::after {
       content: '';
       position: absolute;
-      inset: 4px;
+      inset: 0;
       border-radius: 50%;
-      border: 1px solid rgba(254, 240, 138, 0.65);
+      border: 2px solid rgba(254, 240, 138, 0.5);
+      box-shadow: inset 0 0 8px rgba(250, 204, 21, 0.4);
       pointer-events: none;
-    }
-
-    .golden-frame-placeholder img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 50%;
-      padding: 4px;
-      display: block;
     }
 
     .victory-title {
@@ -320,30 +300,20 @@
 <body>
 
   <div id="app-wrapper">
-    <!-- Logotipo Esquina Superior Izquierda (Relación 1:1) -->
-    <div class="corner-badge top-left">
-      <img src="logo.jpg" alt="Logo" onerror="this.style.display='none'" />
-    </div>
-
-    <!-- Controles Flotantes Superiores Derechos -->
+    <!-- Controles Flotantes Superiores -->
     <div id="floating-controls">
       <button class="glass-btn" id="btn-sound" title="Alternar Sonido">🔊</button>
       <button class="glass-btn" id="btn-restart" title="Nuevo Laberinto">🔄</button>
     </div>
 
-    <!-- Contenedor del Juego (Sin invadir pie ni cabecera) -->
+    <!-- Zona Central del Juego -->
     <main id="game-container"></main>
 
-    <!-- Personaje Esquina Inferior Derecha (Relación 1:1) -->
-    <div class="corner-badge bottom-right">
-      <img src="personaje.jpg" alt="Personaje" onerror="this.style.display='none'" />
-    </div>
-
-    <!-- Modal de Victoria -->
+    <!-- Modal de Victoria con Logo Ajustado -->
     <div id="victory-modal">
       <div class="victory-card">
         <div class="golden-frame-placeholder">
-          <img src="logo.jpg" alt="Logotipo" onerror="this.style.display='none'" />
+          <img src="logo.jpg" alt="Logotipo" class="modal-logo" onerror="this.style.display='none'" />
         </div>
 
         <h2 class="victory-title">¡Felicitaciones!</h2>
