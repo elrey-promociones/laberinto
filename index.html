@@ -23,7 +23,7 @@
       -webkit-touch-callout: none;
     }
 
-    /* Fondo envolvente general */
+    /* Fondo general */
     html, body {
       width: 100vw;
       height: 100dvh;
@@ -106,7 +106,7 @@
       transform: scale(0.92);
     }
 
-    /* Área jugable */
+    /* Área jugable del laberinto */
     #game-container {
       position: absolute;
       top: 17%;
@@ -171,13 +171,13 @@
     }
 
     /* =========================================================================
-       LOGO CIRCULAR: Centrado exacto sin lunas ni desfasajes
+       LOGO CIRCULAR: ALINEACIÓN PERFECTA DEL BORDE DORADO CON EL EXTERIOR
        ========================================================================= */
     .golden-frame-placeholder {
-      width: 105px;
-      height: 105px;
-      min-width: 105px;
-      min-height: 105px;
+      width: 110px;
+      height: 110px;
+      min-width: 110px;
+      min-height: 110px;
       aspect-ratio: 1 / 1;
       margin: 0 auto 16px auto;
       border-radius: 50%;
@@ -188,8 +188,8 @@
       padding: 0;
       position: relative;
       background: #08112b;
-      border: 2px solid #facc15;
-      box-shadow: 0 0 25px rgba(250, 204, 21, 0.75);
+      border: 3px solid #facc15;
+      box-shadow: 0 0 25px rgba(250, 204, 21, 0.8), inset 0 0 8px rgba(0, 0, 0, 0.6);
     }
 
     .golden-frame-placeholder .modal-logo {
@@ -201,8 +201,9 @@
       margin: 0;
       padding: 0;
       object-fit: cover;
-      /* Corrección de escala y traslación para centrar el león y el personaje */
-      transform: scale(1.48) translate(-6.5%, -8.5%);
+      /* Desplazamiento positivo en X e Y para bajar y mover a la derecha el contenido,
+         encajando el borde dorado de la imagen exactamente con el borde circular */
+      transform: scale(1.48) translate(8.5%, 11.5%);
       transform-origin: center center;
     }
 
