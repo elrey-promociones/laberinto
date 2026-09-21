@@ -14,6 +14,12 @@
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
 
   <style>
+    :root {
+      /* Relación por defecto (9:16) actualizada dinámicamente por JS con la imagen real */
+      --bg-aspect-ratio: calc(9 / 16);
+      --bg-aspect-inverted: calc(16 / 9);
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -23,7 +29,7 @@
       -webkit-touch-callout: none;
     }
 
-    /* 1. Base del Viewport sin barras de desplazamiento */
+    /* Fondo general oscuro para rellenar los bordes en pantallas ultra anchas o ultra largas */
     html, body {
       width: 100vw;
       height: 100dvh;
@@ -32,43 +38,39 @@
       overflow: hidden;
       position: fixed;
       inset: 0;
-      background-color: #040817;
+      background-color: #060e24;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    /* 2. Contenedor principal: pantalla completa sin deformar las esquinas ni cortar el pie */
+    /* Contenedor del juego: Bloqueado a la proporción exacta de fondo.jpg para impedir deformaciones */
     #app-wrapper {
       position: relative;
-      width: 100vw;
-      height: 100dvh;
-      max-height: 100dvh;
-      max-width: min(100vw, calc(100dvh * (9 / 16)));
-      margin: 0 auto;
+      margin: auto;
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      justify-content: center;
+      align-items: center;
+
+      /* Restricción matemática de escala: mantiene la imagen 100% proporcional */
+      height: 100dvh;
+      width: calc(100dvh * var(--bg-aspect-ratio));
+      max-width: 100vw;
+      max-height: calc(100vw * var(--bg-aspect-inverted));
+      aspect-ratio: var(--bg-aspect-ratio);
+
       background-color: #08122d;
       background-image: url('fondo.jpg');
       background-position: center center;
       background-repeat: no-repeat;
-      background-size: contain;
-      box-shadow: 0 0 45px rgba(0, 0, 0, 0.95);
+      background-size: 100% 100%;
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.95);
     }
 
-    /* En pantallas con relación de aspecto móvil estricta, llena el 100% */
-    @media (max-aspect-ratio: 9/16) {
-      #app-wrapper {
-        width: 100vw;
-        height: 100dvh;
-        max-width: 100vw;
-        background-size: 100% 100%;
-      }
-    }
-
-    /* 3. Controles flotantes superiores */
+    /* Botones superiores */
     #floating-controls {
       position: absolute;
       top: max(12px, env(safe-area-inset-top));
@@ -85,8 +87,8 @@
       -webkit-backdrop-filter: blur(8px);
       border: 1px solid rgba(250, 204, 21, 0.6);
       color: #fef08a;
-      width: 36px;
-      height: 36px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -101,15 +103,15 @@
       transform: scale(0.92);
     }
 
-    /* 4. Área jugable restringida para no tapar el texto inferior ni la cabecera */
+    /* Área jugable del laberinto: posicionada entre el logo EL REY y el texto inferior */
     #game-container {
       position: absolute;
-      top: 17.5%;
-      bottom: 21.5%;
-      left: 0;
-      right: 0;
-      width: 100%;
-      height: 61%;
+      top: 17%;
+      bottom: 23%;
+      left: 3%;
+      right: 3%;
+      width: 94%;
+      height: 60%;
       touch-action: none;
       display: flex;
       align-items: center;
@@ -127,7 +129,7 @@
       object-fit: contain;
     }
 
-    /* 5. Modal de Victoria y Ajuste Completo de logo.jpg */
+    /* Modal de Victoria */
     #victory-modal {
       position: absolute;
       inset: 0;
@@ -165,7 +167,7 @@
       box-shadow: 0 0 35px rgba(250, 204, 21, 0.45), 0 25px 50px rgba(0, 0, 0, 0.95);
     }
 
-    /* Contenedor del círculo dorado: 1:1 estricto con recorte de bordes */
+    /* Círculo dorado del logo en el modal */
     .golden-frame-placeholder {
       width: 90px;
       height: 90px;
@@ -183,10 +185,8 @@
       justify-content: center;
       overflow: hidden;
       padding: 0;
-      box-sizing: border-box;
     }
 
-    /* Ajuste de logo.jpg para rellenar completamente el círculo */
     .golden-frame-placeholder .modal-logo {
       width: 100%;
       height: 100%;
@@ -195,9 +195,6 @@
       object-position: center center;
       border-radius: 50%;
       display: block;
-      margin: 0;
-      padding: 0;
-      border: none;
     }
 
     .golden-frame-placeholder::after {
@@ -206,7 +203,6 @@
       inset: 0;
       border-radius: 50%;
       border: 2px solid rgba(254, 240, 138, 0.5);
-      box-shadow: inset 0 0 8px rgba(250, 204, 21, 0.4);
       pointer-events: none;
     }
 
@@ -300,16 +296,16 @@
 <body>
 
   <div id="app-wrapper">
-    <!-- Controles Flotantes Superiores -->
+    <!-- Controles flotantes superiores -->
     <div id="floating-controls">
       <button class="glass-btn" id="btn-sound" title="Alternar Sonido">🔊</button>
       <button class="glass-btn" id="btn-restart" title="Nuevo Laberinto">🔄</button>
     </div>
 
-    <!-- Zona Central del Juego -->
+    <!-- Área del laberinto -->
     <main id="game-container"></main>
 
-    <!-- Modal de Victoria con Logo Ajustado -->
+    <!-- Modal de Victoria con Logotipo perfectamente circular -->
     <div id="victory-modal">
       <div class="victory-card">
         <div class="golden-frame-placeholder">
@@ -337,7 +333,33 @@
 
   <script>
     /* =========================================================================
-       1. REDIRECCIÓN A WHATSAPP (WEB SHARE API + URL UNIVERSAL)
+       0. CORRECCIÓN AUTOMÁTICA DE PROPORCIÓN PARA EVITAR ÓVALOS EN "fondo.jpg"
+       ========================================================================= */
+    const bgImage = new Image();
+    bgImage.src = 'fondo.jpg';
+    bgImage.onload = () => {
+      const naturalRatio = bgImage.naturalWidth / bgImage.naturalHeight;
+      const invertedRatio = bgImage.naturalHeight / bgImage.naturalWidth;
+      
+      document.documentElement.style.setProperty('--bg-aspect-ratio', naturalRatio);
+      document.documentElement.style.setProperty('--bg-aspect-inverted', invertedRatio);
+
+      const wrapper = document.getElementById('app-wrapper');
+      if (wrapper) {
+        wrapper.style.aspectRatio = `${bgImage.naturalWidth} / ${bgImage.naturalHeight}`;
+        wrapper.style.width = `calc(100dvh * ${naturalRatio})`;
+        wrapper.style.maxWidth = '100vw';
+        wrapper.style.maxHeight = `calc(100vw * ${invertedRatio})`;
+      }
+
+      // Notificar a Phaser para que reajuste la escala de colisión exacta
+      if (window.gameInstance) {
+        window.gameInstance.scale.refresh();
+      }
+    };
+
+    /* =========================================================================
+       1. REDIRECCIÓN A WHATSAPP
        ========================================================================= */
     const VICTORY_SHARE_TEXT = '¡Hola! Acabo de ganar el laberinto de la fortuna El Rey 🍀🎁 ¡Quiero cobrar mi premio!';
 
@@ -361,7 +383,7 @@
       window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
     }
 
-    /* Generador DFS de laberinto (0 = Muro, 1 = Camino libre) */
+    /* Generador DFS de laberinto */
     function generateDFSMaze(cols, rows) {
       const width = cols % 2 === 0 ? cols + 1 : cols;
       const height = rows % 2 === 0 ? rows + 1 : rows;
@@ -421,7 +443,7 @@
     }
 
     /* =========================================================================
-       2. CONTROLADOR DE COLISIÓN CON DESLIZAMIENTO SUAVE Y DESACOPLADO
+       2. MOTOR DE COLISIONES CON DESLIZAMIENTO FLUIDO (SIN ATASCOS)
        ========================================================================= */
     class MazeCollisionController {
       constructor(mazeGrid, tileSize, offsetX, offsetY, mazeWidth, mazeHeight) {
@@ -646,10 +668,10 @@
         const canvasW = this.cameras.main.width;
         const canvasH = this.cameras.main.height;
 
-        const minX = canvasW * 0.05;
-        const maxX = canvasW * 0.95;
-        const minY = canvasH * 0.05;
-        const maxY = canvasH * 0.95;
+        const minX = canvasW * 0.04;
+        const maxX = canvasW * 0.96;
+        const minY = canvasH * 0.04;
+        const maxY = canvasH * 0.96;
 
         const availableW = maxX - minX;
         const availableH = maxY - minY;
@@ -950,7 +972,7 @@
       scene: [CasinoMazeScene]
     };
 
-    const game = new Phaser.Game(config);
+    window.gameInstance = new Phaser.Game(config);
 
     function showToast(msg) {
       const toast = document.getElementById('toast');
@@ -960,7 +982,7 @@
     }
 
     document.getElementById('btn-restart').addEventListener('click', () => {
-      const scene = game.scene.getScene('CasinoMazeScene');
+      const scene = window.gameInstance.scene.getScene('CasinoMazeScene');
       if (scene) scene.resetGame();
     });
 
@@ -971,7 +993,7 @@
     });
 
     document.getElementById('btn-modal-retry').addEventListener('click', () => {
-      const scene = game.scene.getScene('CasinoMazeScene');
+      const scene = window.gameInstance.scene.getScene('CasinoMazeScene');
       if (scene) scene.resetGame();
     });
 
