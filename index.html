@@ -36,14 +36,13 @@
       background-image: url('fondo.jpg');
       background-position: center center;
       background-repeat: no-repeat;
-      background-size: cover; /* Llena toda la pantalla de fondo */
+      background-size: cover;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    /* Desenfoque sutil en bordes si la pantalla es más ancha que la imagen */
     body::before {
       content: '';
       position: absolute;
@@ -53,7 +52,7 @@
       z-index: 1;
     }
 
-    /* 2. CONTENEDOR CON RELACIÓN BLOQUEADA: Los círculos NUNCA se deforman */
+    /* 2. Contenedor principal */
     #app-wrapper {
       position: relative;
       z-index: 2;
@@ -67,12 +66,10 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-
       background-color: transparent;
       background-image: url('fondo.jpg');
       background-position: center center;
       background-repeat: no-repeat;
-      /* ¡AQUÍ ESTÁ LA SOLUCIÓN!: contain respeta la geometría original al 100% */
       background-size: contain; 
     }
 
@@ -173,36 +170,42 @@
       box-shadow: 0 0 35px rgba(250, 204, 21, 0.45), 0 25px 50px rgba(0, 0, 0, 0.95);
     }
 
-    /* Círculo dorado con logo ajustado al 100% */
+    /* =========================================================================
+       6. SOLUCIÓN EXACTA PARA logo.jpg
+       Quitamos el borde externo duplicado y hacemos que el borde dorado de tu
+       propia imagen llene el 100% del contenedor sin espacios negros ni desfasajes.
+       ========================================================================= */
     .golden-frame-placeholder {
-      width: 100px;
-      height: 100px;
-      min-width: 100px;
-      min-height: 100px;
+      width: 110px;
+      height: 110px;
+      min-width: 110px;
+      min-height: 110px;
       aspect-ratio: 1 / 1;
       margin: 0 auto 16px auto;
       border-radius: 50%;
-      border: 3.5px solid #facc15;
-      box-shadow: 0 0 25px rgba(250, 204, 21, 0.6), 0 4px 15px rgba(0, 0, 0, 0.8);
-      background-color: #08112b;
       overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 0;
       position: relative;
+      background: transparent;
+      /* Sombra dorada exterior que realza el brillo de tu logo */
+      box-shadow: 0 0 25px rgba(250, 204, 21, 0.7);
     }
 
     .golden-frame-placeholder .modal-logo {
       width: 100%;
       height: 100%;
       aspect-ratio: 1 / 1;
-      object-fit: cover;
-      object-position: center center;
       border-radius: 50%;
       display: block;
       margin: 0;
       padding: 0;
+      /* Escala hacia afuera para que el aro dorado propio del logo toque los bordes */
+      object-fit: cover;
+      transform: scale(1.35) translate(3%, 3%);
+      transform-origin: center center;
     }
 
     .victory-title {
@@ -267,7 +270,7 @@
       transform: translateY(1px);
     }
 
-    /* 6. Toast arriba para no tapar el texto inferior */
+    /* 7. Toast en la parte superior para no tapar el texto inferior */
     #toast {
       position: absolute;
       top: max(60px, calc(env(safe-area-inset-top) + 50px));
@@ -308,7 +311,7 @@
     <!-- Contenedor del Juego -->
     <main id="game-container"></main>
 
-    <!-- Modal de Victoria -->
+    <!-- Modal de Victoria con Logo Rellenando al 100% -->
     <div id="victory-modal">
       <div class="victory-card">
         <div class="golden-frame-placeholder">
