@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>El Rey - Laberinto de la Fortuna</title>
-  <meta name="description" content="Laberinto de la fortuna temático 'El Rey'. Arrastra el trébol hacia el regalo y llévate tu extra por WhatsApp." />
+  <meta name="description" content="Laberinto interactivo de la fortuna con contador en Firebase Realtime Database e integración a WhatsApp." />
   <meta property="og:title" content="El Rey - Laberinto de la Fortuna" />
-  <meta property="og:description" content="Arrastra el trébol hacia el regalo y llévate tu extra por WhatsApp." />
+  <meta property="og:description" content="Laberinto interactivo de la fortuna con contador en Firebase Realtime Database e integración a WhatsApp." />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
 
@@ -23,7 +23,7 @@
       -webkit-touch-callout: none;
     }
 
-    /* Fondo general */
+    /* Fondo envolvente general */
     html, body {
       width: 100vw;
       height: 100dvh;
@@ -52,7 +52,7 @@
       z-index: 1;
     }
 
-    /* Contenedor del juego */
+    /* Contenedor del juego con relación geométrica protegida */
     #app-wrapper {
       position: relative;
       z-index: 2;
@@ -170,9 +170,7 @@
       box-shadow: 0 0 35px rgba(250, 204, 21, 0.45), 0 25px 50px rgba(0, 0, 0, 0.95);
     }
 
-    /* =========================================================================
-       LOGO CIRCULAR: ALINEACIÓN PERFECTA DEL BORDE DORADO CON EL EXTERIOR
-       ========================================================================= */
+    /* Marco dorado del logo */
     .golden-frame-placeholder {
       width: 110px;
       height: 110px;
@@ -201,8 +199,6 @@
       margin: 0;
       padding: 0;
       object-fit: cover;
-      /* Desplazamiento positivo en X e Y para bajar y mover a la derecha el contenido,
-         encajando el borde dorado de la imagen exactamente con el borde circular */
       transform: scale(1.48) translate(8.5%, 11.5%);
       transform-origin: center center;
     }
@@ -241,10 +237,16 @@
       margin-bottom: 12px;
       text-decoration: none;
       letter-spacing: 0.3px;
+      transition: all 0.2s ease;
     }
 
     .btn-claim:active {
       transform: translateY(1px);
+    }
+
+    .btn-claim:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
     }
 
     .btn-claim svg {
@@ -318,7 +320,9 @@
         </div>
 
         <h2 class="victory-title">¡Felicitaciones!</h2>
-        <p class="victory-subtitle">¡Llegaste al regalo! Reclama tu premio y llévate tu extra ahora mismo.</p>
+        <p class="victory-subtitle" id="victory-subtitle-text">
+          ¡Llegaste al regalo! Reclama tu premio y llévate tu extra ahora mismo.
+        </p>
         
         <button id="btn-claim-prize" class="btn-claim" type="button">
           <svg viewBox="0 0 24 24">
@@ -334,33 +338,99 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
     /* =========================================================================
-       1. REDIRECCIÓN A WHATSAPP
+       1. FIREBASE REALTIME DATABASE - CONTADOR ATÓMICO SEGURO
        ========================================================================= */
-    const VICTORY_SHARE_TEXT = '¡Hola! Acabo de ganar el laberinto de la fortuna El Rey 🍀🎁 ¡Quiero cobrar mi premio!';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
+    const firebaseConfig = {
+      databaseURL: "https://laberinto-6f1b2-default-rtdb.firebaseio.com/"
+    };
+
+    const fbApp = initializeApp(firebaseConfig);
+    const db = getDatabase(fbApp);
+
+    // Variable global para almacenar el número del jugador en la partida actual
+    let jugadorNumeroActual = null;
+    let transaccionEnProgreso = false;
+
+    /**
+     * Incrementa atómicamente el nodo 'contador_jugadores' en Firebase y retorna el número asignado.
+     */
+    async function registrarJugadorGanador() {
+      const contadorRef = ref(db, "contador_jugadores");
+      try {
+        const result = await runTransaction(contadorRef, (valorActual) => {
+          // Si el nodo aún no existe en Firebase (null), arranca en 1; de lo contrario suma 1
+          return (valorActual || 0) + 1;
+        });
+
+        if (result.committed) {
+          const nuevoNumero = result.snapshot.val();
+          console.log("Número asignado por Firebase:", nuevoNumero);
+          return nuevoNumero;
+        } else {
+          console.warn("La transacción no se pudo completar.");
+          return null;
+        }
+      } catch (error) {
+        console.error("Error al registrar jugador en Firebase Realtime Database:", error);
+        return null;
+      }
+    }
+
+    /* =========================================================================
+       2. RECLAMO DE PREMIO Y REDIRECCIÓN CON NÚMERO A WHATSAPP
+       ========================================================================= */
     async function claimPrizeUniversal() {
-      const shareData = {
-        title: 'El Rey - Laberinto de la Fortuna',
-        text: VICTORY_SHARE_TEXT
-      };
+      const btnClaim = document.getElementById("btn-claim-prize");
 
-      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      // Si todavía no se tiene el número asignado, esperamos a Firebase
+      if (!jugadorNumeroActual) {
+        if (btnClaim) {
+          btnClaim.disabled = true;
+          btnClaim.innerHTML = 'Generando número...';
+        }
+        jugadorNumeroActual = await registrarJugadorGanador();
+        if (btnClaim) {
+          btnClaim.disabled = false;
+          btnClaim.innerHTML = `
+            <svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:currentColor;margin-right:8px;">
+              <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766 0-3.187-2.59-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.297.144.35.491 1.2.534 1.288.043.088.072.19.014.305-.058.115-.087.187-.173.289l-.26.309c-.087.087-.179.18-.077.355.101.175.45 0.742.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.102-.115.434-.506.549-.68.116-.174.232-.145.39-.087s1.011.477 1.184.564c.173.087.289.13.332.202.043.073.043.419-.101.824zm-3.423-10.416c-5.523 0-10 4.477-10 10 0 1.884.524 3.646 1.436 5.163l-1.524 5.571 5.733-1.504c1.464.838 3.161 1.317 4.969 1.317 5.523 0 10-4.477 10-10s-4.477-10-10-10zm0 18.393c-1.637 0-3.155-.472-4.436-1.288l-.318-.202-3.3 0.866.881-3.219-.221-.352c-.896-1.425-1.373-3.093-1.373-4.814 0-4.631 3.769-8.4 8.4-8.4s8.4 3.769 8.4 8.4-3.769 8.4-8.4 8.4z"/>
+            </svg>
+            Cobrar Premio
+          `;
+        }
+      }
+
+      // Concatenamos el número de jugador recuperado de Firebase con el prefijo '#'
+      const sufijo = jugadorNumeroActual ? ` #${jugadorNumeroActual}` : "";
+      const mensajeTexto = `¡Hola! Acabo de ganar el laberinto de la fortuna El Rey 🍀🎁 ¡Quiero cobrar mi premio!${sufijo}`;
+
+      // encodeURIComponent protege el carácter '#' y los espacios evitando que se rompa el link
+      const encodedMsg = encodeURIComponent(mensajeTexto);
+      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMsg}`;
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ text: mensajeTexto })) {
         try {
-          await navigator.share(shareData);
+          await navigator.share({
+            title: 'El Rey - Laberinto de la Fortuna',
+            text: mensajeTexto
+          });
           return;
         } catch (err) {
           if (err.name === 'AbortError') return;
         }
       }
 
-      const encodedMsg = encodeURIComponent(VICTORY_SHARE_TEXT);
-      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMsg}`;
       window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
     }
 
-    /* Generador DFS de laberinto */
+    /* =========================================================================
+       3. GENERADOR DFS DE LABERINTO
+       ========================================================================= */
     function generateDFSMaze(cols, rows) {
       const width = cols % 2 === 0 ? cols + 1 : cols;
       const height = rows % 2 === 0 ? rows + 1 : rows;
@@ -420,7 +490,7 @@
     }
 
     /* =========================================================================
-       2. MOTOR DE COLISIONES CON DESLIZAMIENTO SUAVE
+       4. MOTOR DE COLISIONES CON DESLIZAMIENTO SUAVE
        ========================================================================= */
     class MazeCollisionController {
       constructor(mazeGrid, tileSize, offsetX, offsetY, mazeWidth, mazeHeight) {
@@ -523,7 +593,9 @@
       }
     }
 
-    /* Sonidos con Web Audio API */
+    /* =========================================================================
+       5. SONIDOS WEB AUDIO API
+       ========================================================================= */
     class SoundFX {
       constructor() {
         this.ctx = null;
@@ -576,7 +648,9 @@
 
     const sound = new SoundFX();
 
-    /* Escena de Phaser 3 */
+    /* =========================================================================
+       6. ESCENA PHASER 3
+       ========================================================================= */
     class CasinoMazeScene extends Phaser.Scene {
       constructor() {
         super({ key: 'CasinoMazeScene' });
@@ -897,6 +971,7 @@
         }
       }
 
+      /* Disparo de Victoria y llamada a Firebase en paralelo */
       handleVictory() {
         if (this.isGameFinished) return;
         this.isGameFinished = true;
@@ -916,6 +991,23 @@
           ease: 'Back.easeOut'
         });
 
+        // 1. Resetear el estado para esta partida
+        jugadorNumeroActual = null;
+        const subText = document.getElementById("victory-subtitle-text");
+        if (subText) {
+          subText.innerHTML = "¡Llegaste al regalo! Conectando con la fortuna...";
+        }
+
+        // 2. Incrementar atómicamente en Firebase
+        registrarJugadorGanador().then((numero) => {
+          jugadorNumeroActual = numero;
+          if (numero && subText) {
+            subText.innerHTML = `¡Llegaste al regalo! Tu número de jugador es <strong>#${numero}</strong>. Reclama tu premio y llévate tu extra ahora mismo.`;
+          } else if (subText) {
+            subText.innerHTML = "¡Llegaste al regalo! Reclama tu premio y llévate tu extra ahora mismo.";
+          }
+        });
+
         setTimeout(() => {
           document.getElementById('victory-modal').classList.add('active');
         }, 340);
@@ -923,6 +1015,11 @@
 
       resetGame() {
         document.getElementById('victory-modal').classList.remove('active');
+        jugadorNumeroActual = null;
+        const subText = document.getElementById("victory-subtitle-text");
+        if (subText) {
+          subText.innerHTML = "¡Llegaste al regalo! Reclama tu premio y llévate tu extra ahora mismo.";
+        }
         this.startSingleGame();
         showToast('¡Nuevo laberinto de la fortuna generado!');
       }
