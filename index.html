@@ -23,7 +23,7 @@
       -webkit-touch-callout: none;
     }
 
-    /* Fondo envolvente general */
+    /* Fondo general */
     html, body {
       width: 100vw;
       height: 100dvh;
@@ -52,7 +52,7 @@
       z-index: 1;
     }
 
-    /* Contenedor del juego con relación geométrica protegida */
+    /* Contenedor del juego */
     #app-wrapper {
       position: relative;
       z-index: 2;
@@ -245,8 +245,8 @@
     }
 
     .btn-claim:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
+      opacity: 0.75;
+      cursor: wait;
     }
 
     .btn-claim svg {
@@ -312,7 +312,7 @@
     <!-- Contenedor del Juego -->
     <main id="game-container"></main>
 
-    <!-- Modal de Victoria con Logo Centrado -->
+    <!-- Modal de Victoria -->
     <div id="victory-modal">
       <div class="victory-card">
         <div class="golden-frame-placeholder">
@@ -340,7 +340,7 @@
 
   <script type="module">
     /* =========================================================================
-       1. FIREBASE REALTIME DATABASE - CONTADOR ATÓMICO SEGURO
+       1. CONEXIÓN A FIREBASE REALTIME DATABASE (CON INCREMENTO ATÓMICO)
        ========================================================================= */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getDatabase, ref, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -352,72 +352,81 @@
     const fbApp = initializeApp(firebaseConfig);
     const db = getDatabase(fbApp);
 
-    // Variable global para almacenar el número del jugador en la partida actual
+    // Variables de control de estado del ticket/contador
     let jugadorNumeroActual = null;
-    let transaccionEnProgreso = false;
+    let promesaTransaccion = null;
 
     /**
-     * Incrementa atómicamente el nodo 'contador_jugadores' en Firebase y retorna el número asignado.
+     * Realiza una transacción atómica segura en 'contador_jugadores'
+     * para que ningún jugador repita número ni haya colisiones.
      */
     async function registrarJugadorGanador() {
       const contadorRef = ref(db, "contador_jugadores");
       try {
         const result = await runTransaction(contadorRef, (valorActual) => {
-          // Si el nodo aún no existe en Firebase (null), arranca en 1; de lo contrario suma 1
           return (valorActual || 0) + 1;
         });
 
         if (result.committed) {
           const nuevoNumero = result.snapshot.val();
-          console.log("Número asignado por Firebase:", nuevoNumero);
+          console.log("Número del contador asignado:", nuevoNumero);
           return nuevoNumero;
         } else {
-          console.warn("La transacción no se pudo completar.");
           return null;
         }
       } catch (error) {
-        console.error("Error al registrar jugador en Firebase Realtime Database:", error);
+        console.error("Error al registrar en Firebase:", error);
         return null;
       }
     }
 
     /* =========================================================================
-       2. RECLAMO DE PREMIO Y REDIRECCIÓN CON NÚMERO A WHATSAPP
+       2. ENVÍO A WHATSAPP CON EL NÚMERO DESPUÉS DEL '#'
        ========================================================================= */
     async function claimPrizeUniversal() {
       const btnClaim = document.getElementById("btn-claim-prize");
 
-      // Si todavía no se tiene el número asignado, esperamos a Firebase
-      if (!jugadorNumeroActual) {
+      // 1. Si la petición a Firebase está en curso, esperamos su resultado
+      if (!jugadorNumeroActual && promesaTransaccion) {
         if (btnClaim) {
           btnClaim.disabled = true;
-          btnClaim.innerHTML = 'Generando número...';
+          btnClaim.innerText = "Generando ticket...";
+        }
+        jugadorNumeroActual = await promesaTransaccion;
+      } 
+      // 2. Si por algún motivo aún no se disparó, la ejecutamos ahora
+      else if (!jugadorNumeroActual) {
+        if (btnClaim) {
+          btnClaim.disabled = true;
+          btnClaim.innerText = "Generando ticket...";
         }
         jugadorNumeroActual = await registrarJugadorGanador();
-        if (btnClaim) {
-          btnClaim.disabled = false;
-          btnClaim.innerHTML = `
-            <svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:currentColor;margin-right:8px;">
-              <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766 0-3.187-2.59-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.297.144.35.491 1.2.534 1.288.043.088.072.19.014.305-.058.115-.087.187-.173.289l-.26.309c-.087.087-.179.18-.077.355.101.175.45 0.742.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.102-.115.434-.506.549-.68.116-.174.232-.145.39-.087s1.011.477 1.184.564c.173.087.289.13.332.202.043.073.043.419-.101.824zm-3.423-10.416c-5.523 0-10 4.477-10 10 0 1.884.524 3.646 1.436 5.163l-1.524 5.571 5.733-1.504c1.464.838 3.161 1.317 4.969 1.317 5.523 0 10-4.477 10-10s-4.477-10-10-10zm0 18.393c-1.637 0-3.155-.472-4.436-1.288l-.318-.202-3.3 0.866.881-3.219-.221-.352c-.896-1.425-1.373-3.093-1.373-4.814 0-4.631 3.769-8.4 8.4-8.4s8.4 3.769 8.4 8.4-3.769 8.4-8.4 8.4z"/>
-            </svg>
-            Cobrar Premio
-          `;
-        }
       }
 
-      // Concatenamos el número de jugador recuperado de Firebase con el prefijo '#'
-      const sufijo = jugadorNumeroActual ? ` #${jugadorNumeroActual}` : "";
-      const mensajeTexto = `¡Hola! Acabo de ganar el laberinto de la fortuna El Rey 🍀🎁 ¡Quiero cobrar mi premio!${sufijo}`;
+      if (btnClaim) {
+        btnClaim.disabled = false;
+        btnClaim.innerHTML = `
+          <svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:currentColor;margin-right:8px;">
+            <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766 0-3.187-2.59-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.297.144.35.491 1.2.534 1.288.043.088.072.19.014.305-.058.115-.087.187-.173.289l-.26.309c-.087.087-.179.18-.077.355.101.175.45 0.742.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.102-.115.434-.506.549-.68.116-.174.232-.145.39-.087s1.011.477 1.184.564c.173.087.289.13.332.202.043.073.043.419-.101.824zm-3.423-10.416c-5.523 0-10 4.477-10 10 0 1.884.524 3.646 1.436 5.163l-1.524 5.571 5.733-1.504c1.464.838 3.161 1.317 4.969 1.317 5.523 0 10-4.477 10-10s-4.477-10-10-10zm0 18.393c-1.637 0-3.155-.472-4.436-1.288l-.318-.202-3.3 0.866.881-3.219-.221-.352c-.896-1.425-1.373-3.093-1.373-4.814 0-4.631 3.769-8.4 8.4-8.4s8.4 3.769 8.4 8.4-3.769 8.4-8.4 8.4z"/>
+          </svg>
+          Cobrar Premio
+        `;
+      }
 
-      // encodeURIComponent protege el carácter '#' y los espacios evitando que se rompa el link
-      const encodedMsg = encodeURIComponent(mensajeTexto);
-      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMsg}`;
+      // 3. Concatena el número del contador después del "#"
+      const numeroTexto = jugadorNumeroActual ? `#${jugadorNumeroActual}` : "#1";
+      const mensajeFinal = `¡Hola! Acabo de ganar el laberinto de la fortuna El Rey 🍀🎁 ¡Quiero cobrar mi premio! ${numeroTexto}`;
 
-      if (navigator.share && navigator.canShare && navigator.canShare({ text: mensajeTexto })) {
+      // 4. encodeURIComponent garantiza que el '#' se envíe como '%23' y no se pierda al abrir WhatsApp
+      const mensajeCodificado = encodeURIComponent(mensajeFinal);
+      const whatsappUrl = `https://api.whatsapp.com/send?text=${mensajeCodificado}`;
+
+      // Si el dispositivo soporta el diálogo nativo de compartir
+      if (navigator.share && navigator.canShare && navigator.canShare({ text: mensajeFinal })) {
         try {
           await navigator.share({
             title: 'El Rey - Laberinto de la Fortuna',
-            text: mensajeTexto
+            text: mensajeFinal
           });
           return;
         } catch (err) {
@@ -425,6 +434,7 @@
         }
       }
 
+      // Redirección directa a la app de WhatsApp
       window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
     }
 
@@ -594,7 +604,7 @@
     }
 
     /* =========================================================================
-       5. SONIDOS WEB AUDIO API
+       5. EFECTOS DE SONIDO WEB AUDIO API
        ========================================================================= */
     class SoundFX {
       constructor() {
@@ -649,7 +659,7 @@
     const sound = new SoundFX();
 
     /* =========================================================================
-       6. ESCENA PHASER 3
+       6. ESCENA PRINCIPAL DE PHASER 3
        ========================================================================= */
     class CasinoMazeScene extends Phaser.Scene {
       constructor() {
@@ -971,7 +981,6 @@
         }
       }
 
-      /* Disparo de Victoria y llamada a Firebase en paralelo */
       handleVictory() {
         if (this.isGameFinished) return;
         this.isGameFinished = true;
@@ -991,21 +1000,22 @@
           ease: 'Back.easeOut'
         });
 
-        // 1. Resetear el estado para esta partida
+        // 1. Resetear el estado para esta partida y lanzar la transacción inmediatamente
         jugadorNumeroActual = null;
         const subText = document.getElementById("victory-subtitle-text");
         if (subText) {
-          subText.innerHTML = "¡Llegaste al regalo! Conectando con la fortuna...";
+          subText.innerHTML = "¡Llegaste al regalo! Conectando con Firebase...";
         }
 
-        // 2. Incrementar atómicamente en Firebase
-        registrarJugadorGanador().then((numero) => {
+        // 2. Ejecutar la transacción en segundo plano
+        promesaTransaccion = registrarJugadorGanador().then((numero) => {
           jugadorNumeroActual = numero;
           if (numero && subText) {
-            subText.innerHTML = `¡Llegaste al regalo! Tu número de jugador es <strong>#${numero}</strong>. Reclama tu premio y llévate tu extra ahora mismo.`;
+            subText.innerHTML = `¡Llegaste al regalo! Tu número de jugador es <strong>#${numero}</strong>. Reclama tu premio y llévate tu extra.`;
           } else if (subText) {
             subText.innerHTML = "¡Llegaste al regalo! Reclama tu premio y llévate tu extra ahora mismo.";
           }
+          return numero;
         });
 
         setTimeout(() => {
@@ -1016,6 +1026,7 @@
       resetGame() {
         document.getElementById('victory-modal').classList.remove('active');
         jugadorNumeroActual = null;
+        promesaTransaccion = null;
         const subText = document.getElementById("victory-subtitle-text");
         if (subText) {
           subText.innerHTML = "¡Llegaste al regalo! Reclama tu premio y llévate tu extra ahora mismo.";
